@@ -71,6 +71,22 @@ function Document({ children }: { children: ReactNode }) {
           {data?.attributes.siteName && <h1>{data.attributes.siteName}</h1>}
           <nav>
             <Link to="/">Home</Link>
+            {" / "}
+            <a
+              href="https://github.com/jacob-ebey/remix-cloudflare-blog-example"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Source
+            </a>
+            {" / "}
+            <a
+              href="https://github.com/jacob-ebey/remix-blog-example-content"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Content
+            </a>
           </nav>
         </header>
         {children}
