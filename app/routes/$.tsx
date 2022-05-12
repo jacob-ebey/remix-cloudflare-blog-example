@@ -17,9 +17,10 @@ export let loader: LoaderFunction = async ({ params, request }) => {
   let markdownResponse = await fetch(
     `https://github-md.com/jacob-ebey/remix-blog-example-content/${sha}/routes/${params["*"]}.md`
   );
-  let markdown = await markdownResponse.json<
-    GithubMdResponse<{ title?: string; description?: string }>
-  >();
+  let markdown = (await markdownResponse.json()) as GithubMdResponse<{
+    title?: string;
+    description?: string;
+  }>;
   if ("error" in markdown) {
     throw json(null, { status: markdownResponse.status });
   }
