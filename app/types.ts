@@ -1,7 +1,11 @@
 import type { DataFunctionArgs as BaseDataFunctionArgs } from "@remix-run/cloudflare";
 
+export type Env = {
+  mode?: "development";
+};
+
 export type DataFunctionContext = {
-  ctx: EventContext<unknown, string, unknown>;
+  ctx: EventContext<Env, string, unknown>;
 };
 
 export type DataFunctionArgs = Omit<BaseDataFunctionArgs, "context"> & {

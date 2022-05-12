@@ -3,30 +3,20 @@ import { json } from "@remix-run/cloudflare";
 import { useLoaderData } from "@remix-run/react";
 
 import type { GithubMdResponse, LoaderFunction } from "~/types";
+import { js } from "~/utils";
 
 export type LoaderData = {
   html: string;
   attributes: { title?: string; description?: string };
-  pageView: number;
+  pageViewId: string;
 };
 
-export let loader: LoaderFunction = async ({
-  context: { ctx },
-  params,
-  request,
-}) => {
+export let loader: LoaderFunction = async ({ params, request }) => {
   let url = new URL(request.url);
   let sha = url.searchParams.get("sha")?.trim() || "main";
-  let [markdownResponse, pageViewsResponse] = await Promise.all([
-    fetch(
-      `https://github-md.com/jacob-ebey/remix-blog-example-content/${sha}/routes/${params["*"]}.md`
-    ),
-    fetch(
-      `https://api.countapi.xyz/get/remix-blog-example/${
-        params["*"]?.replace(/\//, "--") || "unknown"
-      }--${sha}`
-    ),
-  ]);
+  let markdownResponse = await fetch(
+    `https://github-md.com/jacob-ebey/remix-blog-example-content/${sha}/routes/${params["*"]}.md`
+  );
   let markdown = await markdownResponse.json<
     GithubMdResponse<{ title?: string; description?: string }>
   >();
@@ -34,27 +24,15 @@ export let loader: LoaderFunction = async ({
     throw json(null, { status: markdownResponse.status });
   }
 
-  let pageViews = await pageViewsResponse
-    .json<{ value: number | null }>()
-    .then((json) => json?.value || 0)
-    .catch(() => 0);
-  let pageView = pageViews + 1;
-
-  ctx.waitUntil(
-    fetch(
-      `https://api.countapi.xyz/hit/remix-blog-example/${
-        params["*"]?.replace(/\//, "--") || "unknown"
-      }--${sha}`
-    )
-  );
-
   return json<LoaderData>({
     html: markdown.html,
     attributes: {
       description: markdown.attributes.description,
       title: markdown.attributes.title,
     },
-    pageView,
+    pageViewId: `jacob-ebey/remix-blog-example--${
+      params["*"]?.replace(/\//, "--") || "unknown"
+    }--${sha}`,
   });
 };
 
@@ -69,13 +47,33 @@ export const meta: MetaFunction = ({ data }: { data?: LoaderData }) => {
 };
 
 export default function CatchAll() {
-  let { html, pageView } = useLoaderData() as LoaderData;
+  let { html, pageViewId } = useLoaderData() as LoaderData;
+
+  let countApiUrl = `https://api.countapi.xyz/hit/${pageViewId}?callback=handlePageView`;
 
   return (
     <main>
       <article dangerouslySetInnerHTML={{ __html: html }} />
       <footer>
-        <p>Page View: {pageView}</p>
+        <p>
+          Page View: <span id="page-view" />
+          <script
+            async
+            type="module"
+            dangerouslySetInnerHTML={{
+              __html: js`
+                window.handlePageView = ({ value }) => {
+                  console.log({ value });
+                  if (value) {
+                    document.getElementById("page-view").innerText = String(value);
+                  }
+                };
+
+                import(${JSON.stringify(countApiUrl)}).catch(console.error);
+              `,
+            }}
+          />
+        </p>
       </footer>
     </main>
   );
