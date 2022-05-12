@@ -9,7 +9,9 @@
     "dev:remix": "remix watch",
     "dev:wrangler": "cross-env NODE_ENV=development wrangler pages dev ./public -b GITHUB_USERNAME='jacob-ebey' -b GITHUB_REPOSITORY='remix-blog-example-content'",
     "dev": "remix build && run-p dev:*",
-    "start": "cross-env NODE_ENV=production npm run dev:wrangler"
+    "start": "cross-env NODE_ENV=production npm run dev:wrangler",
+    "lint": "eslint --cache --cache-location ./node_modules/.cache/eslint .",
+    "typecheck": "tsc -b"
   },
   "dependencies": {
     "@remix-run/cloudflare": "^1.4.3",

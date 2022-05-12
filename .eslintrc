@@ -1,3 +1,4 @@
 {
-  "extends": ["@remix-run/eslint-config"]
+  "extends": ["@remix-run/eslint-config"],
+  "ignorePatterns": [".*/**/*", "functions/**/*", "public/build/**/*"]
 }
