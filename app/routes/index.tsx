@@ -1,85 +1,47 @@
-import { renderToStaticMarkup } from "react-dom/server";
-import type { LoaderFunction } from "@remix-run/cloudflare";
 import { json } from "@remix-run/cloudflare";
-import { useLoaderData } from "@remix-run/react";
 
-type LoaderData = {
-  html: string;
-};
+import type { GithubMdResponse, LoaderFunction } from "~/types";
 
-export let loader: LoaderFunction = async () => {
-  let [markdownResponse, filesResponse] = await Promise.all([
+import CatchAll, { meta } from "./$";
+import type { LoaderData } from "./$";
+
+export { meta };
+export default CatchAll;
+
+export let loader: LoaderFunction = async ({ context: { ctx }, request }) => {
+  let url = new URL(request.url);
+  let sha = url.searchParams.get("sha")?.trim() || "main";
+
+  let [markdownResponse, pageViewsResponse] = await Promise.all([
     fetch(
-      "https://github-md.com/jacob-ebey/remix-blog-example-content/main/routes/index.md"
+      `https://github-md.com/jacob-ebey/remix-blog-example-content/${sha}/routes/index.md`
     ),
-    fetch("https://github-md.com/jacob-ebey/remix-blog-example-content/main"),
+    fetch(`https://api.countapi.xyz/get/remix-blog-example/index--${sha}`),
   ]);
   let markdown = await markdownResponse.json<
-    { attributes: unknown; html: string } | { error: string }
+    GithubMdResponse<{ title?: string; description?: string }>
   >();
   if ("error" in markdown) {
     console.error(markdown.error);
-    throw new Error(markdown.error);
+    throw json(null, { status: markdownResponse.status });
   }
 
-  let files = await filesResponse.json<
-    { files: { path: string; sha: string }[] } | { error: string }
-  >();
-  if ("error" in files) {
-    console.error(files.error);
-    throw new Error(files.error);
-  }
+  let pageViews = await pageViewsResponse
+    .json<{ value: number | null }>()
+    .then((json) => json?.value || 0)
+    .catch(() => 0);
+  let pageView = pageViews + 1;
 
-  let firstFewPosts = await Promise.all(
-    files.files
-      .filter((file) => file.path.startsWith("routes/blog/"))
-      .slice(0, 20)
-      .map(async (file) =>
-        fetch(
-          `https://github-md.com/jacob-ebey/remix-blog-example-content/main/${file.path}`
-        )
-          .then((res) =>
-            res.json<
-              | { attributes: { title?: string; description?: string } }
-              | { error: string }
-            >()
-          )
-          .then((json) =>
-            "error" in json
-              ? ""
-              : renderToStaticMarkup(
-                  <li>
-                    <a
-                      href={file.path
-                        .replace("routes/", "/")
-                        .replace(/\.md$/, "")}
-                    >
-                      {json.attributes.title ||
-                        file.path.split(/[/\\]/g).pop()?.replace(/\.md$/, "") ||
-                        file.path}
-                    </a>
-                  </li>
-                )
-          )
-      )
+  ctx.waitUntil(
+    fetch(`https://api.countapi.xyz/hit/remix-blog-example/index--${sha}`)
   );
 
-  let html = markdown.html.replace(
-    "{{latestPosts}}",
-    `<ul>${firstFewPosts.join("")}</ul>`
-  );
-
-  return json({
-    html,
+  return json<LoaderData>({
+    html: markdown.html,
+    attributes: {
+      description: markdown.attributes.description,
+      title: markdown.attributes.title,
+    },
+    pageView,
   });
 };
-
-export default function Index() {
-  let { html } = useLoaderData() as LoaderData;
-
-  return (
-    <main>
-      <article dangerouslySetInnerHTML={{ __html: html }} />
-    </main>
-  );
-}
