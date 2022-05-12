@@ -113,7 +113,6 @@ export default function App() {
   return (
     <Document>
       <Outlet />
-      <LiveReload />
     </Document>
   );
 }
