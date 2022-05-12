@@ -1,7 +1,8 @@
 import type { DataFunctionArgs as BaseDataFunctionArgs } from "@remix-run/cloudflare";
 
 export type Env = {
-  mode?: "development";
+  GITHUB_USERNAME?: string;
+  GITHUB_REPOSITORY?: string;
 };
 
 export type DataFunctionContext = {

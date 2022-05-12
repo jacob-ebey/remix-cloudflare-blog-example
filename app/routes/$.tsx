@@ -11,11 +11,22 @@ export type LoaderData = {
   pageViewId: string;
 };
 
-export let loader: LoaderFunction = async ({ params, request }) => {
+export let loader: LoaderFunction = async ({
+  context: { ctx },
+  params,
+  request,
+}) => {
+  let username = ctx.env.GITHUB_USERNAME;
+  let repository = ctx.env.GITHUB_REPOSITORY;
+
+  if (!username || !repository) {
+    throw new Error("Github username and repository are required");
+  }
+
   let url = new URL(request.url);
   let sha = url.searchParams.get("sha")?.trim() || "main";
   let markdownResponse = await fetch(
-    `https://github-md.com/jacob-ebey/remix-blog-example-content/${sha}/routes/${params["*"]}.md`
+    `https://github-md.com/${username}/${repository}/${sha}/routes/${params["*"]}.md`
   );
   let markdown = (await markdownResponse.json()) as GithubMdResponse<{
     title?: string;
@@ -31,7 +42,7 @@ export let loader: LoaderFunction = async ({ params, request }) => {
       description: markdown.attributes.description,
       title: markdown.attributes.title,
     },
-    pageViewId: `jacob-ebey/remix-blog-example--${
+    pageViewId: `${username}/${repository}--${
       params["*"]?.replace(/\//, "--") || "unknown"
     }--${sha}`,
   });

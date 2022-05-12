@@ -18,11 +18,19 @@ type LoaderData = {
     siteName?: string;
     siteDescription?: string;
   };
+  contentUrl: string;
 };
 
-export const loader: LoaderFunction = async () => {
+export const loader: LoaderFunction = async ({ context: { ctx } }) => {
+  let username = ctx.env.GITHUB_USERNAME;
+  let repository = ctx.env.GITHUB_REPOSITORY;
+
+  if (!username || !repository) {
+    throw new Error("Github username and repository are required");
+  }
+
   let configResponse = await fetch(
-    "https://github-md.com/jacob-ebey/remix-blog-example-content/main/config.md"
+    `https://github-md.com/${username}/${repository}/main/config.md`
   );
 
   let markdown = await configResponse.json<
@@ -38,6 +46,7 @@ export const loader: LoaderFunction = async () => {
       siteName: markdown.attributes.siteName,
       siteDescription: markdown.attributes.siteDescription,
     },
+    contentUrl: `https://github.com/${username}/${repository}`,
   });
 };
 
@@ -79,14 +88,18 @@ function Document({ children }: { children: ReactNode }) {
             >
               Source
             </a>
-            {" / "}
-            <a
-              href="https://github.com/jacob-ebey/remix-blog-example-content"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Content
-            </a>
+            {data && (
+              <>
+                {" / "}
+                <a
+                  href={data?.contentUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Content
+                </a>
+              </>
+            )}
           </nav>
         </header>
         {children}
